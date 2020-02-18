@@ -1,0 +1,50 @@
+#
+# nek parameter file
+#
+[GENERAL] 
+#startFrom = restart.fld 
+stopAt =  numSteps #endTime
+#endTime = 100
+numSteps = 10000
+
+#dt = 5.000000E-03
+#timeStepper = bdf2
+variableDt = yes
+targetCFL = 0.5
+
+writeControl =  runTime #timeStep
+writeInterval = 100
+
+#dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.100000E-01
+#filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+equation = incompNS
+#stressFormulation = yes
+#lowMachNumber = no 
+#dp0dt = yes
+variableProperties = no
+
+[MESH]
+writeToFieldFile = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.000000E-06
+residualProj = no
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.000000E-08
+residualProj = no
+density = 1.0
+viscosity = 1.0
+advection = yes
+writeToFieldFile = yes
+
+[_CHKPOINT]             # Runtime paramere section for checkpoint module
+READCHKPT            = no                     # Restat from checkpoint
+CHKPFNUMBER          = 2                      # Restart file number
+CHKPINTERVAL         = 25                     # Checkpiont saving frequency (number of time steps)

@@ -1,0 +1,25 @@
+c-----------------------------------------------------------------------
+c     
+c	FILTER SUPPORT
+c
+c-----------------------------------------------------------------------
+c     Common blocks for the extended arrays containg the informations
+c     retrieved by ghostbuster
+
+      real x_ext(lx1,ly1,lz1,lelt_ext)
+      real y_ext(lx1,ly1,lz1,lelt_ext)
+      real z_ext(lx1,ly1,lz1,lelt_ext)
+      real bm1_ext(lx1,ly1,lz1,lelt_ext)
+      real C1weights_ext(lx1,ly1,lz1,lelt_ext)
+      real field_ext(lx1,ly1,lz1,lelt_ext)
+      
+      logical if_filini
+      
+      integer hndl_ext
+
+      common /rvsupport/ x_ext,y_ext,z_ext,bm1_ext,field_ext
+     $     ,C1weights_ext
+
+      common /isupport/ hndl_ext
+      
+      common /lsupport/ if_filini

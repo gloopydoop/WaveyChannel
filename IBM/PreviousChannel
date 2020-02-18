@@ -1,0 +1,248 @@
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf  (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'NEKUSE'          ! FF[XYZ], U[XYZ]
+!      include 'ADJOINT'
+      include 'INPUT'
+      include 'SOLN'
+      include 'PARALLEL'
+      
+      FFX = 0.0
+      FFY = 0.0
+      FFZ = 0.0
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+	QVOL   = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+	include 'ZPER'  ! for nelx,nely,nelz
+
+
+	integer i, n
+	real u_max_center(nx1*lelx), y_max_center(nx1*lelx)
+
+!	Frame stuff
+!     start framework
+	if (ISTEP.eq.0) then
+         call frame_start
+      endif
+
+!     monitor simulation
+      call frame_monitor
+
+!     finalise framework
+      if (ISTEP.eq.NSTEPS.or.LASTEP.eq.1) then
+         call frame_end
+
+      endif
+
+      if (mod(istep,10).eq.0) then
+
+      endif
+
+      if (mod(ISTEP,300).eq.0) then
+		! 	Check the max velocity center line
+		call planar_max_r(u_max_center,y_max_center,vx)
+		open(unit=56,file='Max_centerline.dat')
+		write(56,*) 'y_location		U_max'
+		do i=1,lx1*lelx
+			write(56,*) y_max_center(i), u_max_center(i)
+		enddo
+		close(56)
+      endif
+	
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+c     NOTE ::: This subroutine MAY NOT be called by every process
+
+
+C     Set boundary conditions
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+	include 'LEVELSET'
+
+!     argument list
+
+c     velocity
+      UX = 0.0
+      UY = 0.0
+      UZ = 0.0
+
+!     Boundary conditions
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+	! implicit none
+
+	integer ix,iy,iz,eg
+
+C     Set initial conditions
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+	ux   = 1.0
+	uy   = 0.0
+	uz   = 0.0
+	temp = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+
+	ntot = nx1*ny1*nz1*nelt
+
+	lam = 1 ! HarryIsTheBomb
+	wave_amp = .1000000000 ! HarryIsTheBigDog
+	h = .4500000000 ! BigDiggityHDizzle
+
+	do i=1,ntot
+	   xx   = xm1(i,1,1,1)
+	   argx = 2*pi*xx/lam
+   		A1   = wave_amp - wave_amp*cos(argx)
+   		ym1(i,1,1,1) = ym1(i,1,1,1) + (2*h+wave_amp-ym1(i,1,1,1))*A1
+	enddo
+
+	param(54) = -1   ! x-direction
+	param(55) = 22.2222222222 ! HarryDancesLikeAGod
+
+	
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      include 'SIZE'
+      include 'TOTAL'
+	include 'LEVELSET'
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+!======================================================================
+!> @brief Register user specified modules
+      subroutine frame_usr_register
+      implicit none
+
+      include 'SIZE'
+      include 'FRAMELP'
+!-----------------------------------------------------------------------
+!     register modules
+      call io_register
+      call chkpt_register
+	call IBM_register
+!      call nseb_register
+
+      return
+      end subroutine
+!======================================================================
+!> @brief Initialise user specified modules
+      subroutine frame_usr_init
+      implicit none
+
+      include 'SIZE'
+      include 'FRAMELP'
+      include 'SOLN'
+!-----------------------------------------------------------------------
+!     initialise modules
+      call chkpt_init
+	call IBM_init
+!      call nseb_init
+
+      return
+      end subroutine
+!======================================================================
+!> @brief Finalise user specified modules
+      subroutine frame_usr_end
+      implicit none
+
+      include 'SIZE'
+      include 'FRAMELP'
+!-----------------------------------------------------------------------
+
+      
+      return
+      end subroutine
+!======================================================================
+
+c-----------------------------------------------------------------------
+      subroutine planar_max_r(ua,ya,u)
+c
+c     Compute s-t planar average of quantity u()
+c
+c 	HARRY: ANY MONEY YOU'VE FUCKED UP THE NELX VS LELX STUFF!
+c	WATCH OUT IF YOU GO PARALLEL!
+      include 'SIZE'
+      include 'GEOM'
+      include 'PARALLEL'
+      include 'ZPER'
+c
+      real ya(nx1,lelx),ua(nx1,lelx),u(nx1,ny1,nx1,nelv)
+      integer e,eg,ex,ey,ez
+c
+      nx = nx1*nelx
+      call rzero(ua,nx)
+	call rzero(ya,nx)
+c
+      do e=1,nelt
+c
+         eg = lglel(e)
+         call get_exyz(ex,ey,ez,eg,lelx,lely,lelz)
+c
+         do i=1,nx1
+         do k=1,nz1
+         do j=1,ny1
+            if(ua(i,ex).lt.u(i,j,k,e)) then
+			ua(i,ex) = u(i,j,k,e)
+			ya(i,ex) = ym1(i,j,k,e)
+		endif
+         enddo
+         enddo
+         enddo
+      enddo
+c
+
+      return
+      end
+

@@ -1,0 +1,347 @@
+#define NUMBER_ELEMENTS_X 10
+#define NUMBER_ELEMENTS_Y 10
+
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf  (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'NEKUSE'          ! FF[XYZ], U[XYZ]
+!      include 'ADJOINT'
+      include 'INPUT'
+      include 'SOLN'
+      include 'PARALLEL'
+      
+      FFX = 0.0
+      FFY = 0.0
+      FFZ = 0.0
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,ieg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+	QVOL   = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk
+      include 'SIZE'
+      include 'TOTAL'
+
+
+	integer i, n
+	integer nelx, nely 
+	real u_max_center(lx1*NUMBER_ELEMENTS_X)
+	real x_max_center(lx1*NUMBER_ELEMENTS_X), y_max_center(lx1*NUMBER_ELEMENTS_X) 
+	real uo(nelv*nx1*ny1*nz1), vo(nelv*nx1*ny1*nz1), wo(nelv*nx1*ny1*nz1)
+	real residu
+
+	nelx = NUMBER_ELEMENTS_X
+	nely = NUMBER_ELEMENTS_Y
+
+!	Frame stuff
+!     start framework
+	if (ISTEP.eq.0) then
+         call frame_start
+      endif
+
+!     monitor simulation
+      call frame_monitor
+
+!     finalise framework
+      if (ISTEP.eq.NSTEPS.or.LASTEP.eq.1) then
+         call frame_end
+
+      endif
+
+      if (mod(istep,10).eq.0) then
+
+      endif
+
+! 	Check convergence to steady state
+	   call opsub2(uo,vo,wo,vx,vy,vz)
+         call normvc(H1,SEMI,L2,LINF,uo,vo,wo)
+         residu = L2/dt
+         call opcopy(uo,vo,wo,vx,vy,vz)
+	write(56,*),'Velocity Residual L2/dt',residu
+
+
+      if (mod(ISTEP,3).eq.0) then
+		! 	Check the max velocity center line
+		call planar_max_r(u_max_center,x_max_center,y_max_center,vx)
+		!call  planar_average_s(U_y_profile,vx,w1,w2)
+		open(unit=56,file='Max_centerline.dat')
+		write(56,*) 'x_location			y_location			U_max '
+		do i=1,lx1*nelx
+			write(56,*) x_max_center(i), y_max_center(i), u_max_center(i)
+		enddo
+		close(56)
+      endif
+	
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+c     NOTE ::: This subroutine MAY NOT be called by every process
+
+
+C     Set boundary conditions
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+	include 'LEVELSET'
+
+!     argument list
+
+c     velocity
+      UX = 0.0
+      UY = 0.0
+      UZ = 0.0
+
+!     Boundary conditions
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+	! implicit none
+
+	integer ix,iy,iz,eg
+
+C     Set initial conditions
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+	ux   = 1.0
+	uy   = 0.0
+	uz   = 0.0
+	temp = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2
+      include 'SIZE'
+      include 'TOTAL'
+
+	ntot = nx1*ny1*nz1*nelt
+
+	lam = 1 ! HarryIsTheBomb
+	wave_amp = .1000000000 ! HarryIsTheBigDog
+	h = .4500000000 ! BigDiggityHDizzle
+
+	do i=1,ntot
+	   xx   = xm1(i,1,1,1)
+	   argx = 2*pi*xx/lam
+   		A1   = wave_amp - wave_amp*cos(argx)
+   		ym1(i,1,1,1) = ym1(i,1,1,1) + (2*h+wave_amp-ym1(i,1,1,1))*A1
+	enddo
+
+	param(54) = -1   ! x-direction
+	param(55) = 22.2222222222 ! HarryDancesLikeAGod
+
+	
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+      include 'SIZE'
+      include 'TOTAL'
+	include 'LEVELSET'
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+!======================================================================
+!> @brief Register user specified modules
+      subroutine frame_usr_register
+      implicit none
+
+      include 'SIZE'
+      include 'FRAMELP'
+!-----------------------------------------------------------------------
+!     register modules
+      call io_register
+      call chkpt_register
+	call IBM_register
+!      call nseb_register
+
+      return
+      end subroutine
+!======================================================================
+!> @brief Initialise user specified modules
+      subroutine frame_usr_init
+      implicit none
+
+      include 'SIZE'
+      include 'FRAMELP'
+      include 'SOLN'
+!-----------------------------------------------------------------------
+!     initialise modules
+      call chkpt_init
+	call IBM_init
+!      call nseb_init
+
+      return
+      end subroutine
+!======================================================================
+!> @brief Finalise user specified modules
+      subroutine frame_usr_end
+      implicit none
+
+      include 'SIZE'
+      include 'FRAMELP'
+!-----------------------------------------------------------------------
+
+      
+      return
+      end subroutine
+!======================================================================
+
+c-----------------------------------------------------------------------
+      subroutine planar_max_r(ua,xa,ya,u)
+c
+c     Compute s-t planar average of quantity u()
+c
+c 	HARRY: ANY MONEY YOU'VE FUCKED UP THE NELX VS LELX STUFF!
+c	WATCH OUT IF YOU GO PARALLEL!
+      include 'SIZE'
+      include 'GEOM'
+      include 'PARALLEL'
+      include 'ZPER'
+c
+      real xa(nx1*NUMBER_ELEMENTS_X), ya(nx1*NUMBER_ELEMENTS_X) 
+	real ua(nx1*NUMBER_ELEMENTS_X), u(nx1,ny1,nz1,nelv) 
+      integer e,k,i,j,table_size, current_index
+c
+	call rzero(xa,nx1*NUMBER_ELEMENTS_X)
+      call rzero(ua,nx1*NUMBER_ELEMENTS_X)
+	call rzero(ya,nx1*NUMBER_ELEMENTS_X)
+
+	table_size = 1
+	xa(1) = xm1(i,j,k,e)
+
+c
+      do e=1,nelv
+	do k=1,nz1
+	do i=1,nx1
+	do j=1,ny1
+		call check_index(current_index,xa,nx1*NUMBER_ELEMENTS_X,table_size,xm1(i,j,k,e))
+            if(ua(current_index).lt.u(i,j,k,e)) then
+			ua(current_index) = u(i,j,k,e)
+			ya(current_index) = ym1(i,j,k,e)
+		endif
+         enddo
+         enddo
+         enddo
+      enddo
+c
+
+      return
+      end 
+!======================================================================
+
+c-----------------------------------------------------------------------
+	subroutine check_index(i,vec,max_n,n,x_val)
+	
+c	Give an array vec() of maximum size max_n but useful size n. 
+c	Mapping indexes to unique reals.
+c	Find the index ind for a searched value x_val.
+c	If the element can't be found, append it to the end of the list
+	real vec(max_n)
+	real x_val
+	integer n, i
+	logical finished
+
+	i = 1
+	finished = .false.
+	do while(i.le.n.and.(.not.finished))
+		if(int(vec(i)*10**9).eq.int(x_val*10**9)) then 
+			finished = .true.
+		else
+			i = i+1
+		endif
+	enddo
+
+	if (.not.finished) then
+		vec(i) = x_val
+		n = n + 1
+	endif
+	
+	return
+	end
+		
+
+!======================================================================
+
+c-----------------------------------------------------------------------
+      subroutine planar_average_s(ua,u,w1,w2)
+c
+c     Compute r-t planar average of quantity u()
+c
+      include 'SIZE'
+      include 'GEOM'
+      include 'PARALLEL'
+      include 'WZ'
+      include 'ZPER'
+c
+      real ua(ny1,nely),u(nx1,ny1,nz1,nelv),w1(ny1,nely),w2(ny1,nely)
+      integer e,eg,ex,ey,ez
+c
+      ny = ny1*nely
+      call rzero(ua,ny)
+      call rzero(w1,ny)
+c
+      do e=1,nelt
+         eg = lglel(e)
+         call get_exyz(ex,ey,ez,eg,nelx,nely,nelz)
+c
+         do k=1,nz1
+         do j=1,ny1
+         do i=1,nx1
+            !zz = (1.-zgm1(j,2))/2.  ! = 1 for i=1, = 0 for k=nx1
+		!zz = 1            
+		!aa = zz*area(i,k,1,e) + (1-zz)*area(i,k,3,e)  ! wgtd jacobian
+            !w1(j,ey) = w1(j,ey) + aa
+            !ua(j,ey) = ua(j,ey) + aa*u(i,j,k,e)
+         enddo
+         enddo
+         enddo
+      enddo
+c
+      !call gop(ua,w2,'+  ',ny)
+      !call gop(w1,w2,'+  ',ny)
+c
+      !do i=1,ny
+      !   ua(i,1) = ua(i,1) / w1(i,1)   ! Normalize
+      !enddo
+
+      return
+      end
+

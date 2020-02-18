@@ -1,0 +1,21 @@
+c Who you gonna call?
+c	GHOSTBUSTER
+c
+c Common blocks and sizes for extending the partition
+
+      integer llay, lelt_nei, lelt_ext,nelt_ext
+      parameter (llay=5)
+      parameter (lelt_nei=(3**ldim-1)*lelt*llay) ! Might be changed if memory issues 
+      parameter (lelt_ext=lelt+lelt_nei)
+
+c      common /ighost/ lelt_nei, llay, lelt_ext, nelt_ext
+      common /ighost/ nelt_ext
+
+      integer ieg_nei(3**ldim,lelt_ext)
+      integer lglel_ext(lelt_ext)
+
+      common /ivghost/ ieg_nei, lglel_ext
+
+      integer*8 glo_num_ext(lx1*ly1*lz1*lelt_ext)
+
+      common /i8vghost/ glo_num_ext

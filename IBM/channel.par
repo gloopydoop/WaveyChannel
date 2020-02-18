@@ -1,0 +1,72 @@
+#
+# nek parameter file
+#
+[GENERAL] 
+#startFrom = restart.fld 
+stopAt =  numSteps #endTime
+#endTime = 100
+numSteps = 10000
+
+#dt = 5.000000E-03
+#timeStepper = bdf2
+variableDt = yes
+targetCFL = 0.5
+
+writeControl =  runTime #timeStep
+writeInterval = 100
+
+#dealiasing = yes
+#filtering = explicit
+#filterWeight = 0.100000E-01
+#filterCutoffRatio = 0.84
+
+[PROBLEMTYPE]
+equation = incompNS
+#stressFormulation = yes
+#lowMachNumber = no 
+#dp0dt = yes
+variableProperties = no
+
+[MESH]
+writeToFieldFile = yes
+
+[PRESSURE]
+preconditioner = semg_xxt
+residualTol = 1.000000E-06
+residualProj = no
+writeToFieldFile = yes
+
+[VELOCITY]
+residualTol = 1.000000E-08
+residualProj = no
+density = 1.0
+viscosity = 1.0
+advection = yes
+writeToFieldFile = yes
+
+[_LEVELSET]
+ AMPMSK  = 1000.000000000000
+ OPT_XMAX=-0.250000000000000
+ OPT_YMAX= 0.250000000000000
+ OPT_YMIN=-0.250000000000000
+ FILTER_R= 0.2
+P_111=0.5
+P_112=1
+P_113=0.000000000000000
+P_121=0.5
+P_122=1
+P_123=0.000000000000000
+P_211=0.5
+P_212=1
+P_213=0.000000000000000
+P_221=0.05
+P_222=1
+P_223=0.000000000000000
+ KERNEL = 2
+ QF_ramp = 88
+ QA_ramp = 8
+ QC_ramp = 8
+ FLTR_type=2
+ FLTR_beta=0.01
+ P_SIMP  = 5
+ MAP_RHO = 2

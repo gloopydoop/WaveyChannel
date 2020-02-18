@@ -1,0 +1,107 @@
+!> @file LEVELSET
+!! @ingroup CLIO
+!! @brief Include file for IBM_tools module
+!! @author CLIO (and a sprinkle of Harry)
+!! @date Mar 7, 2016
+!=======================================================================
+
+! 	Frame stuff
+!-----------------------------------------------------------------------
+
+!     module id and name
+      integer IBM_id
+      character*(*) IBM_name
+      parameter(IBM_name='LEVELSET')
+
+!     initialisation flag
+      logical IBM_ifinit
+
+!     section id
+      integer IBM_sec_id
+
+
+
+!	Parameters (user set)
+!-----------------------------------------------------------------------
+
+      INTEGER IBM_AMPMSK_id,					!no idea
+     $     IBM_OPT_XMAX_id, IBM_OPT_YMAX_id, IBM_OPT_YMIN_id, 
+     $     IBM_FILTER_R_id,					!no idea
+     $     IBM_PROP_id,						!no idea
+     $     IBM_KERNEL_id,					!no idea
+     $     IBM_QC_ramp_id,IBM_QA_ramp_id,IBM_QF_ramp_id,
+     $     IBM_FLTR_type_id,					!no idea
+     $     IBM_FLTR_beta_id,					!no idea
+     $     IBM_P_SIMP_id,					!no idea
+     $     IBM_MAP_RHO_id					!no idea
+
+! Getting that prop matrix in is super annoying! I wish FRAME handled arrays
+	integer IBM_P_111,IBM_P_112,IBM_P_113,
+     $    IBM_P_121,IBM_P_122,IBM_P_123,
+     $    IBM_P_211,IBM_P_212,IBM_P_213,
+     $    IBM_P_221,IBM_P_222,IBM_P_223
+
+!	Parameters (internal)
+!-----------------------------------------------------------------------
+      REAL IBM_MSKLS,						!I think rho_tild
+     $    IBM_MSKNF,						!I think rho
+     $    IBM_LOCALIZATION,					!no idea
+     $    IBM_C1weights,					!no idea
+     $    IBM_MSKF1,				
+     $    IBM_MSKG1,						!no idea
+     $    IBM_MSKF2,						!no idea
+     $    IBM_CLITRANS						!no idea
+
+
+
+      REAL IBM_AMPMSK,						!no idea
+     $     IBM_BOUNDARY,					!no idea
+     $     IBM_IC_XMAX, IBM_IC_YMAX, IBM_IC_YMIN,		!no idea
+     $     IBM_OPT_XMAX, IBM_OPT_YMAX, IBM_OPT_YMIN,		!no idea
+     $     IBM_FILTER_R,						! Filter radius
+     $     IBM_QA_ramp, IBM_QF_ramp, IBM_QC_ramp,		!no idea
+     $     IBM_FLTR_beta					!no idea
+
+      REAL IBM_PROP						!no idea
+		
+	INTEGER IBM_CLEANMSK,
+     $    IBM_KERNEL,						!no idea
+     $    IBM_FLTR_type,					!no idea
+     $    IBM_P_SIMP, 						!no idea
+     $    IBM_MAP_RHO						!no idea
+
+!	Common blocks
+!-----------------------------------------------------------------------
+      COMMON /LVLSET_VT/ IBM_MSKNF(LX1,LY1,LZ1,LELT), 
+     $     IBM_MSKF1(LX1,LY1,LZ1,LELT),
+     $     IBM_MSKG1(LX1,LY1,LZ1,LELT),
+     $     IBM_MSKF2(LX1,LY1,LZ1,LELT),
+     $     IBM_MSKLS(LX1,LY1,LZ1,LELT),
+     $     IBM_LOCALIZATION(LX1,LY1,LZ1,LELT),
+     $     IBM_C1weights(LX1,LY1,LZ1,LELT),
+     $     IBM_CLITRANS(LX1,LY1,LZ1,LELT)
+
+      COMMON /LVLSET_PR/ IBM_PROP(2,2,3)
+
+      COMMON /LVLSET_RE/  IBM_AMPMSK, IBM_BOUNDARY, IBM_IC_XMAX,
+     $	   IBM_IC_YMAX, IBM_IC_YMIN, IBM_OPT_XMAX, IBM_OPT_YMAX,
+     $	   IBM_OPT_YMIN, IBM_FILTER_R,IBM_QA_ramp,IBM_QF_ramp,
+     $	   IBM_QC_ramp, IBM_FLTR_beta
+
+
+      COMMON /LVLSET_IN/  IBM_id, IBM_AMPMSK_id,IBM_sec_id,
+     $	   IBM_CLEANMSK,IBM_KERNEL,IBM_FLTR_type,
+     $	   IBM_P_SIMP, IBM_MAP_RHO,
+     $     IBM_OPT_XMAX_id, IBM_OPT_YMAX_id, IBM_OPT_YMIN_id, 
+     $     IBM_FILTER_R_id,IBM_PROP_id,IBM_KERNEL_id,
+     $     IBM_QC_ramp_id,IBM_QA_ramp_id,IBM_QF_ramp_id,
+     $     IBM_FLTR_type_id,IBM_FLTR_beta_id,IBM_P_SIMP_id,
+     $     IBM_MAP_RHO_id,
+     $    IBM_P_111,IBM_P_112,IBM_P_113,
+     $    IBM_P_121,IBM_P_122,IBM_P_123,
+     $    IBM_P_211,IBM_P_212,IBM_P_213,
+     $    IBM_P_221,IBM_P_222,IBM_P_223
+
+	COMMON /LVLSET_L/ IBM_ifinit
+
+
