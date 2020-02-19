@@ -1,6 +1,9 @@
-SOURCE_ROOT=/scratch/nobis/Nek5000
+NEK_SOURCE_ROOT=/scratch/nobis/Nek5000
 FC=mpif77
-FFLAGS= -fdefault-real-8 -fdefault-double-8 -cpp
+FFLAGS=
+FCPP=-cpp
+FR8=-fdefault-real-8 -fdefault-double-8
+FF77=-std=legacy
 CC=mpicc
 CFLAGS=
-PPLIST= MPI UNDERSCORE TIMER
+PPLIST= MPI UNDERSCORE GLOBAL_LONG_LONG TIMER

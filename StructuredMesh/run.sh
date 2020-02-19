@@ -1,5 +1,4 @@
 # Non dimentional Parameters
-Re=10
 lam_star=10
 h_star=10
 
@@ -11,12 +10,12 @@ Nely=$(bc <<< "$h_star*$Nelx/$lam_star")
 n=1
 
 # Locked in parameters
-lam=10
+h=0.5
 
 # Calculated geometry/flow parameters
-h=$(bc <<< "scale=10; $lam*($h_star - 1)/(2*$lam_star)")
-wave_amp=$(bc <<< "scale=10; $lam/$lam_star")
-U_b=$(bc <<< "scale=10; $Re/$h")
+wave_amp=$(bc <<< "scale=10; 2*$h/($h_star-1)")
+lam=$(bc <<< "scale=10; $wave_amp*$lam_star")
+U_b=1
 
 
 

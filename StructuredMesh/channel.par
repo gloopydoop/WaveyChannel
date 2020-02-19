@@ -5,12 +5,12 @@
 #startFrom = restart.fld 
 stopAt =  numSteps #endTime
 #endTime = 100
-numSteps = 10000
+numSteps = 1000000000
 
 #dt = 5.000000E-03
 #timeStepper = bdf2
 variableDt = yes
-targetCFL = 0.5
+targetCFL = 0.9
 
 writeControl =  runTime #timeStep
 writeInterval = 100
@@ -40,7 +40,7 @@ writeToFieldFile = yes
 residualTol = 1.000000E-08
 residualProj = no
 density = 1.0
-viscosity = 1.0
+viscosity = 1
 advection = yes
 writeToFieldFile = yes
 

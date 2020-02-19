@@ -600,26 +600,27 @@
 	include 'GEOM'        
 
 !     local variables
-	real y_threshold, xx, argx, pi
-	real h, wave_amp, lam, ux, uy, uz
+	real y_threshold, xx, argx, one, twopi
+	real ux, uy, uz
       integer ifield, ix, iy, iz, ieg, iel
-	lam = 10 ! HarryIsTheBomb
-	wave_amp = 1.0000000000 ! HarryIsTheBigDog
-	h = 4.5000000000 ! BigDiggityHDizzle
-	pi = 3.14159265359
+	real h, wave_amp, lam
+	common /geom_harry/ h, wave_amp, lam
 !-----------------------------------------------------------------------
 	iel=GLLEL(ieg)
 	xx   = xm1(ix,iy,iz,iel)
-	argx = 2*pi*xx/lam
+	one   = 1.
+      twopi = 8.*atan(one)
+	argx = twopi*xx/lam
 	y_threshold   = wave_amp - wave_amp*cos(argx)
 	
-	write(6,*), xx
 	if(ym1(ix,iy,iz,iel).gt.y_threshold) then
-		IBM_MSKNF(ix,iy,iz,iel) = 1
-		ux = 1
-	else
 		IBM_MSKNF(ix,iy,iz,iel) = 0
+		ux = 1
+		
+	else
+		IBM_MSKNF(ix,iy,iz,iel) = 1
 		ux = 0
+
 	endif
 	uy = 0
 	uz = 0

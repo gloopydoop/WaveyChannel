@@ -75,7 +75,12 @@ c-----------------------------------------------------------------------
       	call frame_start
 		call opcopy(uo,vo,wo,vx,vy,vz)
 		call set_obj
-		call outpost(IBM_MSKNF,vy,vz,pr,temp,'IC')
+
+!		Set up mask!
+		
+		call filter_init()
+		call filter_openclose(IBM_MSKNF)
+		call outpost(IBM_MSKNF,IBM_MSKLS,vz,pr,temp,'IC')
 
       endif
 
@@ -103,8 +108,23 @@ c-----------------------------------------------------------------------
 		!call mntr_set_conv(.true.)
 	endif
 
+!	call my version of vol_flow
+	if (istep.gt.0) call vol_flow_porous
+
+
+	call compute_Re_tau_vol_flow(Re_tau_vol_flow)
+	call compute_Re_tau_friction(Re_tau_friction)
+	call compute_Re_tau_dissipation(Ree_tau_dissipation)
+
+	write(6,*) 'Re_T'
+	write(6,*) 'Friction		Dissipation		Vol_flow'
+	write(6,*), Re_tau_friction, Ree_tau_dissipation, Re_tau_vol_flow
 
 ! Kill
+
+	if (ISTEP.eq.800) then
+		call outpost(vx,IBM_MSKNF,vz,pr,temp,'spy')
+	endif
 
 ! Statistics on last timestep:
 !	if (istep.eq.10) then ! (change this when you're ready!)
@@ -212,8 +232,7 @@ C     Set initial conditions
       include 'NEKUSE'
 	include 'LEVELSET'
 
-	call IBM_set_wave(ux,uy,uz,ix,iy,iz,ieg) 
-
+	call IBM_set_wave(ux,uy,uz,ix,iy,iz,ieg)
 
       return
       end
@@ -227,17 +246,17 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-
+	real h, wave_amp, lam
 	common /geom_harry/ h, wave_amp, lam
 
 	ntot = nx1*ny1*nz1*nelt
 
-	lam = 10 ! HarryIsTheBomb
-	wave_amp = 1.0000000000 ! HarryIsTheBigDog
-	h = 4.5000000000 ! BigDiggityHDizzle
+	lam = 1.1111111110 ! HarryIsTheBomb
+	wave_amp = .1111111111 ! HarryIsTheBigDog
+	h = 0.5 ! BigDiggityHDizzle
 
-	param(54) = -1   ! x-direction
-	param(55) = 2.2222222222 ! HarryDancesLikeAGod
+c	param(54) = 0   ! x-direction
+c	param(55) = 1 ! HarryDancesLikeAGod
 
 
 	
@@ -250,6 +269,8 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 	include 'LEVELSET'
 
+      param(55) = 0.0           ! turn off original code
+      param(56) = 1.0           ! set ubar
 
       return
       end
@@ -382,6 +403,8 @@ c	If the element can't be found, append it to the end of the list
       include 'SIZE'
       include 'TOTAL'
 
+	real Re_d, F
+	real lam, h, wave_amp
 	common /geom_harry/ h, wave_amp, lam
 	integer e, ntot, etot
 	real sij(lx1*ly1*lz1,ldim,ldim), snrm(lx1*ly1*lz1,lelv)
@@ -395,25 +418,24 @@ c	If the element can't be found, append it to the end of the list
 		call mag_tensor_e(snrm(1,e),sij)
 		call vsq(snrm(1,e),etot)
 		call cmult(snrm(1,e),4.0,etot) ! tak to Philipp about this!!
-		if (e.eq.nelv) call outpost(snrm,vx,vy,pr,t,'dif')
 	enddo
+	
 	total_dis = glsc2(snrm,bm1,ntot)
-	xsec = volvm1/lam	! average CSA
-	flow_rate = param(55)*xsec
+
+	Re_d = 1/param(2)
+	flow_rate = 2*h*1
 	dpdx = total_dis/flow_rate/lam
-	rho    = 1.
-	dnu    = param(2)
-	tw = dpdx*h
-	u_tau  = sqrt(tw/rho)
-	Re_tau = u_tau*h/dnu
-	write(6,*), vx_integrated, total_dis, volvm1, flow_rate, xsec
+	F = total_dis*lam
+	tw = dpdx
+	u_tau  = sqrt(tw)
+	Re_tau = Re_d/2*u_tau
       return
       end
 
 !======================================================================
 
 c-----------------------------------------------------------------------
-      subroutine compute_Re_tau_vol_flow(Re_tau)
+       subroutine compute_Re_tau_vol_flow(Re_tau)
       include 'SIZE'
       include 'TOTAL'
 
@@ -441,46 +463,19 @@ c
 
 !	These are mine
 	integer ntot2
-	real dpdx, Re_tau, tw, rho, dnu, u_tau, base_flow, flow_rate, total_force
+	real dpdx, Re_tau, tw, rho, dnu, u_tau, base_flow, flow_rate, total_force, Re_d
+
+	real lam, h, wave_amp
 	common /geom_harry/ h, wave_amp, lam
 
 
-!	ntot2 = kx1*ky1*kz1*nelv
-	!call copy(pr_added,pr,ntot2)
-	!call add2s2(pr_added,prc,-1*saved_scale,ntot2)
-!	call copy(pr_added,prc,ntot2)
-!	write(6,*) 'made it'
-!	call cmult(pr_added,saved_scale)
-	
-!	call outpost(vx,vy,vz,pr_added,pr,'test')
 
-
-!	if (icvflow.eq.1) base_flow = glsc2(vxb,bm1,ntot1)/domain_length
-!      if (icvflow.eq.2) base_flow = glsc2(vyb,bm1,ntot1)/domain_length
-!      if (icvflow.eq.3) base_flow = glsc2(vzb,bm1,ntot1)/domain_length
-
-!	if (iavflow.eq.1) then
-!         xsec = volvm1 / domain_length
-!         flow_rate = param(55)*xsec
-!      endif
-
-	
-
-!      delta_flow = flow_rate-current_flow
-!      scales = delta_flow/base_flow
-!      scale_vf(icvflow) = scales
-
-!	ntot2 = lx2*ly2*lz2*nelp
-	!call outpost(vx,vy,vz,prc,pr,'test')
-!	dpdx = glsc2(prc,bm2,ntot2)/domain_length*saved_scale
-
-	write(6,*) 'Hdizzle ', saved_scale
-	
+	Re_d    = 1/param(2)
 	total_force = saved_scale*volvm1
 !	call BC_area(wall_area)
 	rho    = 1.
 	dnu    = param(2)
-	tw = total_force/lam/2
+	tw = total_force/lam
 
 	u_tau  = sqrt(tw/rho)
 	Re_tau = u_tau*h/dnu
@@ -489,10 +484,6 @@ c
 
       return
       end
-
-!======================================================================
-
-
 !======================================================================
 
 c-----------------------------------------------------------------------
@@ -500,26 +491,17 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'TOTAL'
 
-	real rho, u_tau, Re_tau, dnu, h
+	real rho, u_tau, Re_tau, dnu, Re_d
 	real x0(3)
 	real drag_total, total_wall_area, A1, A2, drag_equiv
-	common /ctorq/ dragx(0:maxobj),dragpx(0:maxobj),dragvx(0:maxobj)
-     $             , dragy(0:maxobj),dragpy(0:maxobj),dragvy(0:maxobj)
-     $             , dragz(0:maxobj),dragpz(0:maxobj),dragvz(0:maxobj)
-c
-     $             , torqx(0:maxobj),torqpx(0:maxobj),torqvx(0:maxobj)
-     $             , torqy(0:maxobj),torqpy(0:maxobj),torqvy(0:maxobj)
-     $             , torqz(0:maxobj),torqpz(0:maxobj),torqvz(0:maxobj)
-c
-     $             , dpdx_mean,dpdy_mean,dpdz_mean
-     $             , dgtq(3,4)
 
-
+	real lam, h, wave_amp
 	common /geom_harry/ h, wave_amp, lam
+	
 c maybe not down here
 
-	rho    = 1.
-	dnu    = param(2)
+	
+	Re_d    = 1/param(2)
       call rzero(x0,3)               ! torque w.r.t. x0
 	call torque_calc(1.0,x0,.false.,.false.) ! wall shear
 !	dragx1 is bottom wall
@@ -530,14 +512,12 @@ c maybe not down here
 !	A1 = total_wall_area - lam ! bottom wall
 !	tw = drag_equiv/(lam)
 !	tw = dragx(1)/(wall_area-lam) + dragx(2)/lam
-	tw = drag_total/lam/2
-	u_tau  = sqrt(tw/rho)
-	Re_tau = u_tau*h/dnu
-	write(6,*), dragx(1), dragx(2), dragy(1), dragy(2)
+	tw = drag_total/lam
+	u_tau  = sqrt(tw)
+	Re_tau = Re_d/2*u_tau
 
       return
       end
-
 c-----------------------------------------------------------------------
 	subroutine BC_area(BCarea)
 
@@ -795,3 +775,425 @@ c-----------------------------------------------------------------------
       return
       end subroutine
 !======================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+c-----------------------------------------------------------------------
+      subroutine vol_flow_porous
+c
+c
+c     Adust flow volume at end of time step to keep flow rate fixed by
+c     adding an appropriate multiple of the linear solution to the Stokes
+c     problem arising from a unit forcing in the X-direction.  This assumes
+c     that the flow rate in the X-direction is to be fixed (as opposed to Y-
+c     or Z-) *and* that the periodic boundary conditions in the X-direction
+c     occur at the extreme left and right ends of the mesh.
+c
+c     pff 6/28/98
+c
+      include 'SIZE'
+      include 'TOTAL'
+	include 'LEVELSET'
+c
+c     Swap the comments on these two lines if you don't want to fix the
+c     flow rate for periodic-in-X (or Z) flow problems.
+c
+      parameter (kx1=lx1,ky1=ly1,kz1=lz1,kx2=lx2,ky2=ly2,kz2=lz2)
+c
+      common /cvflow_a/ vxc(kx1,ky1,kz1,lelv)
+     $                , vyc(kx1,ky1,kz1,lelv)
+     $                , vzc(kx1,ky1,kz1,lelv)
+     $                , prc(kx2,ky2,kz2,lelv)
+     $                , vdc(kx1*ky1*kz1*lelv,2)
+      common /cvflow_r/ flow_rate,base_flow,domain_length,xsec
+     $                , scale_vf(3)
+      common /cvflow_i/ icvflow,iavflow
+      common /cvflow_c/ chv(3)
+      character*1 chv
+
+	real mask_volume
+
+	real saved_scale
+	common /Hdizzle/ saved_scale
+c
+      real bd_vflow,dt_vflow
+      save bd_vflow,dt_vflow
+      data bd_vflow,dt_vflow /-99.,-99./
+
+	real v_tmp(kx1,ky1,kz1,lelv), pr_tmp(kx2,ky2,kz2,lelv)
+
+      logical ifcomp
+
+c     Check list:
+
+c     param (55) -- volume flow rate, if nonzero
+c     forcing in X? or in Z?
+
+
+      ntot1 = lx1*ly1*lz1*nelv
+      ntot2 = lx2*ly2*lz2*nelv
+
+      if (param(55).eq.0.) return
+      if (kx1.eq.1) then
+         write(6,*) 'ABORT. Recompile vol_flow with kx1=lx1, etc.'
+         call exitt
+      endif
+
+      icvflow   = 1                                  ! Default flow dir. = X
+      if (param(54).ne.0) icvflow = abs(param(54))
+      iavflow   = 0                                  ! Determine flow rate
+      if (param(54).lt.0) iavflow = 1                ! from mean velocity
+      flow_rate = param(55)
+
+      chv(1) = 'X'
+      chv(2) = 'Y'
+      chv(3) = 'Z'
+
+c     If either dt or the backwards difference coefficient change,
+c     then recompute base flow solution corresponding to unit forcing:
+
+      ifcomp = .false.
+      if (dt.ne.dt_vflow.or.bd(1).ne.bd_vflow.or.ifmvbd) ifcomp=.true.
+      if (.not.ifcomp) then
+         ifcomp=.true.
+         do i=1,ntot1
+            if (vdiff (i,1,1,1,1).ne.vdc(i,1)) goto 20
+            if (vtrans(i,1,1,1,1).ne.vdc(i,2)) goto 20
+         enddo
+         ifcomp=.false.  ! If here, then vdiff/vtrans unchanged.
+   20    continue
+      endif
+      call gllog(ifcomp,.true.)
+      
+      call copy(vdc(1,1),vdiff (1,1,1,1,1),ntot1)
+      call copy(vdc(1,2),vtrans(1,1,1,1,1),ntot1)
+      dt_vflow = dt
+      bd_vflow = bd(1)
+
+      if (ifcomp) call compute_vol_soln_porous(vxc,vyc,vzc,prc)
+
+c-------------------------HARRY------------------------------------------------
+c 	could change it in the future to zeros in mask!!
+      if (icvflow.eq.1) current_flow=glsc2(vx,bm1,ntot1)/domain_length  ! for X
+      if (icvflow.eq.2) current_flow=glsc2(vy,bm1,ntot1)/domain_length  ! for Y
+      if (icvflow.eq.3) current_flow=glsc2(vz,bm1,ntot1)/domain_length  ! for Z
+
+      if (iavflow.eq.1) then
+c-------------------------HARRY------------------------------------------------
+	   mask_volume = glsc2(IBM_MSKLS,bm1,ntot1) ! this is the volume of the fluid
+c-------------------------HARRY------------------------------------------------
+         xsec = mask_volume / domain_length
+         flow_rate = param(55)*xsec
+      endif
+
+      delta_flow = flow_rate-current_flow
+
+c     Note, this scale factor corresponds to FFX, provided FFX has
+c     not also been specified in userf.   If ffx is also specified
+c     in userf then the true FFX is given by ffx_userf + scale.
+
+      scale = delta_flow/base_flow
+	saved_scale = scale
+      scale_vf(icvflow) = scale
+      if (nio.eq.0) write(6,1) istep,chv(icvflow)
+     $   ,time,scale,delta_flow,current_flow,flow_rate
+    1    format(i11,'  Harrys Volflow ',a1,11x,1p5e13.4)
+
+c--------HARRY: THIS IS SO FUCKING SKETCHY, TALK TO PHILIPP!!!-----------
+	call copy(v_tmp,vxc,ntot1)	
+	call col2(v_tmp,MSKLS,ntot1)
+      call add2s2(vx,v_tmp,scale,ntot1)
+
+	call copy(v_tmp,vyc,ntot1)	
+	call col2(v_tmp,MSKLS,ntot1)
+      call add2s2(vy,vtmp,scale,ntot1)
+
+	call copy(v_tmp,vzc,ntot1)	
+	call col2(v_tmp,MSKLS,ntot1)
+      call add2s2(vz,vtmp,scale,ntot1)
+
+	call copy(pr_tmp,prc,ntot2)	
+	call col2(pr_tmp,MSKLS,ntot2)
+      call add2s2(pr,pr_tmp,scale,ntot2)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine compute_vol_soln_porous(vxc,vyc,vzc,prc)
+c
+c     Compute the solution to the time-dependent Stokes problem
+c     with unit forcing, and find associated flow rate.
+c
+c     pff 2/28/98
+c
+      include 'SIZE'
+      include 'TOTAL'
+c
+      real vxc(lx1,ly1,lz1,lelv)
+     $   , vyc(lx1,ly1,lz1,lelv)
+     $   , vzc(lx1,ly1,lz1,lelv)
+     $   , prc(lx2,ly2,lz2,lelv)
+c
+      common /cvflow_r/ flow_rate,base_flow,domain_length,xsec
+     $                , scale_vf(3)
+      common /cvflow_i/ icvflow,iavflow
+      common /cvflow_c/ chv(3)
+      character*1 chv
+c
+      integer icalld
+      save    icalld
+      data    icalld/0/
+c
+c
+      ntot1 = lx1*ly1*lz1*nelv
+      if (icalld.eq.0) then
+         icalld=icalld+1
+         xlmin = glmin(xm1,ntot1)
+         xlmax = glmax(xm1,ntot1)
+         ylmin = glmin(ym1,ntot1)          !  for Y!
+         ylmax = glmax(ym1,ntot1)
+         zlmin = glmin(zm1,ntot1)          !  for Z!
+         zlmax = glmax(zm1,ntot1)
+c
+         if (icvflow.eq.1) domain_length = xlmax - xlmin
+         if (icvflow.eq.2) domain_length = ylmax - ylmin
+         if (icvflow.eq.3) domain_length = zlmax - zlmin
+c
+      endif
+c
+      if (ifsplit) then
+c        call plan2_vol_porous(vxc,vyc,vzc,prc)
+         call plan4_vol_porous(vxc,vyc,vzc,prc)
+      else
+         call plan3_vol_porous(vxc,vyc,vzc,prc)
+      endif
+c
+c     Compute base flow rate
+c 
+      if (icvflow.eq.1) base_flow = glsc2(vxc,bm1,ntot1)/domain_length
+      if (icvflow.eq.2) base_flow = glsc2(vyc,bm1,ntot1)/domain_length
+      if (icvflow.eq.3) base_flow = glsc2(vzc,bm1,ntot1)/domain_length
+c
+      if (nio.eq.0 .and. loglevel.gt.2) write(6,1) 
+     $   istep,chv(icvflow),base_flow,domain_length,flow_rate
+    1    format(i11,'  basflow ',a1,11x,1p3e13.4)
+c
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine plan2_vol_porous(vxc,vyc,vzc,prc)
+c
+c     Compute pressure and velocity using fractional step method.
+c     (classical splitting scheme).
+c
+c
+      include 'SIZE'
+      include 'TOTAL'
+c
+      real vxc(lx1,ly1,lz1,lelv)
+     $   , vyc(lx1,ly1,lz1,lelv)
+     $   , vzc(lx1,ly1,lz1,lelv)
+     $   , prc(lx2,ly2,lz2,lelv)
+C
+      COMMON /SCRNS/ RESV1 (LX1,LY1,LZ1,LELV)
+     $ ,             RESV2 (LX1,LY1,LZ1,LELV)
+     $ ,             RESV3 (LX1,LY1,LZ1,LELV)
+     $ ,             RESPR (LX2,LY2,LZ2,LELV)
+      COMMON /SCRVH/ H1    (LX1,LY1,LZ1,LELV)
+     $ ,             H2    (LX1,LY1,LZ1,LELV)
+c
+      common /cvflow_i/ icvflow,iavflow
+C
+C
+C     Compute pressure 
+C
+      ntot1  = lx1*ly1*lz1*nelv
+c
+      if (icvflow.eq.1) then
+         call cdtp     (respr,v1mask,rxm2,sxm2,txm2,1)
+      elseif (icvflow.eq.2) then
+         call cdtp     (respr,v2mask,rxm2,sxm2,txm2,1)
+      else
+         call cdtp     (respr,v3mask,rxm2,sxm2,txm2,1)
+      endif
+c
+      call ortho    (respr)
+c
+      call ctolspl  (tolspl,respr)
+      call rone     (h1,ntot1)
+      call rzero    (h2,ntot1)
+c
+      call hmholtz  ('PRES',prc,respr,h1,h2,pmask,vmult,
+     $                             imesh,tolspl,nmxp,1)
+      call ortho    (prc)
+C
+C     Compute velocity
+C
+      call opgrad   (resv1,resv2,resv3,prc)
+      call opchsgn  (resv1,resv2,resv3)
+      call add2col2 (resv1,bm1,v1mask,ntot1)
+c
+      intype = -1
+      call sethlm   (h1,h2,intype)
+      call ophinv   (vxc,vyc,vzc,resv1,resv2,resv3,h1,h2,tolhv,nmxv)
+C
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine plan3_vol_porous(vxc,vyc,vzc,prc)
+c
+c     Compute pressure and velocity using fractional step method.
+c     (PLAN3).
+c
+c
+      include 'SIZE'
+      include 'TOTAL'
+c
+      real vxc(lx1,ly1,lz1,lelv)
+     $   , vyc(lx1,ly1,lz1,lelv)
+     $   , vzc(lx1,ly1,lz1,lelv)
+     $   , prc(lx2,ly2,lz2,lelv)
+C
+      COMMON /SCRNS/ rw1   (LX1,LY1,LZ1,LELV)
+     $ ,             rw2   (LX1,LY1,LZ1,LELV)
+     $ ,             rw3   (LX1,LY1,LZ1,LELV)
+     $ ,             dv1   (LX1,LY1,LZ1,LELV)
+     $ ,             dv2   (LX1,LY1,LZ1,LELV)
+     $ ,             dv3   (LX1,LY1,LZ1,LELV)
+     $ ,             RESPR (LX2,LY2,LZ2,LELV)
+      COMMON /SCRVH/ H1    (LX1,LY1,LZ1,LELV)
+     $ ,             H2    (LX1,LY1,LZ1,LELV)
+      COMMON /SCRHI/ H2INV (LX1,LY1,LZ1,LELV)
+      common /cvflow_i/ icvflow,iavflow
+c
+c
+c     Compute velocity, 1st part 
+c
+      ntot1  = lx1*ly1*lz1*nelv
+      ntot2  = lx2*ly2*lz2*nelv
+      ifield = 1
+c
+      if (icvflow.eq.1) then
+         call copy     (rw1,bm1,ntot1)
+         call rzero    (rw2,ntot1)
+         call rzero    (rw3,ntot1)
+      elseif (icvflow.eq.2) then
+         call rzero    (rw1,ntot1)
+         call copy     (rw2,bm1,ntot1)
+         call rzero    (rw3,ntot1)
+      else
+         call rzero    (rw1,ntot1)        ! Z-flow!
+         call rzero    (rw2,ntot1)        ! Z-flow!
+         call copy     (rw3,bm1,ntot1)    ! Z-flow!
+      endif
+      intype = -1
+      call sethlm   (h1,h2,intype)
+      call ophinv   (vxc,vyc,vzc,rw1,rw2,rw3,h1,h2,tolhv,nmxv)
+      call ssnormd  (vxc,vyc,vzc)
+c
+c     Compute pressure  (from "incompr")
+c
+      intype = 1
+      dtinv  = 1./dt
+c
+      call rzero   (h1,ntot1)
+      call copy    (h2,vtrans(1,1,1,1,ifield),ntot1)
+      call cmult   (h2,dtinv,ntot1)
+      call invers2 (h2inv,h2,ntot1)
+      call opdiv   (respr,vxc,vyc,vzc)
+      call chsign  (respr,ntot2)
+      call ortho   (respr)
+c
+c
+c     Set istep=0 so that h1/h2 will be re-initialized in eprec
+      i_tmp = istep
+      istep = 0
+      call esolver (respr,h1,h2,h2inv,intype)
+      istep = i_tmp
+c
+      call opgradt (rw1,rw2,rw3,respr)
+      call opbinv  (dv1,dv2,dv3,rw1,rw2,rw3,h2inv)
+      call opadd2  (vxc,vyc,vzc,dv1,dv2,dv3)
+c
+      call cmult2  (prc,respr,bd(1),ntot2)
+c
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine plan4_vol_porous(vxc,vyc,vzc,prc)
+
+c     Compute pressure and velocity using fractional step method.
+c     (Tombo splitting scheme).
+
+
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      real vxc(lx1,ly1,lz1,lelv)
+     $   , vyc(lx1,ly1,lz1,lelv)
+     $   , vzc(lx1,ly1,lz1,lelv)
+     $   , prc(lx1,ly1,lz1,lelv)
+
+      common /scrns/ resv1 (lx1,ly1,lz1,lelv)
+     $ ,             resv2 (lx1,ly1,lz1,lelv)
+     $ ,             resv3 (lx1,ly1,lz1,lelv)
+     $ ,             respr (lx1,ly1,lz1,lelv)
+      common /scrvh/ h1    (lx1,ly1,lz1,lelv)
+     $ ,             h2    (lx1,ly1,lz1,lelv)
+
+      common /cvflow_i/ icvflow,iavflow
+
+      n = lx1*ly1*lz1*nelv
+      call invers2  (h1,vtrans,n)
+      call rzero    (h2,       n)
+
+c     Compute pressure 
+
+      if (icvflow.eq.1) call cdtp(respr,h1,rxm2,sxm2,txm2,1)
+      if (icvflow.eq.2) call cdtp(respr,h1,rym2,sym2,tym2,1)
+      if (icvflow.eq.3) call cdtp(respr,h1,rzm2,szm2,tzm2,1)
+
+      call ortho    (respr)
+      call ctolspl  (tolspl,respr)
+
+      call hmholtz  ('PRES',prc,respr,h1,h2,pmask,vmult,
+     $                             imesh,tolspl,nmxp,1)
+      call ortho    (prc)
+
+C     Compute velocity
+
+      call opgrad   (resv1,resv2,resv3,prc)
+      if (ifaxis) call col2 (resv2,omask,n)
+      call opchsgn  (resv1,resv2,resv3)
+
+      if (icvflow.eq.1) call add2col2(resv1,v1mask,bm1,n) ! add forcing
+      if (icvflow.eq.2) call add2col2(resv2,v2mask,bm1,n)
+      if (icvflow.eq.3) call add2col2(resv3,v3mask,bm1,n)
+
+
+      if (ifexplvis) call split_vis ! split viscosity into exp/imp part
+
+      intype = -1
+      call sethlm   (h1,h2,intype)
+      call ophinv   (vxc,vyc,vzc,resv1,resv2,resv3,h1,h2,tolhv,nmxv)
+
+      if (ifexplvis) call redo_split_vis ! restore vdiff
+
+      end
+c-----------------------------------------------------------------------
