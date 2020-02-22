@@ -15,26 +15,16 @@ grep: warning: GREP_OPTIONS is deprecated; please use an alias or script
 grep: warning: GREP_OPTIONS is deprecated; please use an alias or script
 grep: warning: GREP_OPTIONS is deprecated; please use an alias or script
 mpif77  -O2 -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/scratch/nobis/Nek5000/run/WavyChannel/IBM -I/scratch/nobis/Nek5000/core -I./ -I /scratch/nobis/Nek5000/core/experimental  -c /scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.f
-/scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.f:981:43:
+/scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.f:978:43:
 
           call plan4_vol_porous(vxc,vyc,vzc,prc)
                                            1
-Warning: Actual argument contains too few elements for dummy argument ‘prc’ (18144/32256) at (1) [-Wargument-mismatch]
-/scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.f:818:23:
+Warning: Actual argument contains too few elements for dummy argument ‘prc’ (18144/32256) at (1)
+/scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.f:1085:20:
 
-       common /cvflow_a/ vxc(kx1,ky1,kz1,lelv)
-                       1
-Warning: Named COMMON block ‘cvflow_a’ at (1) shall be of the same size as elsewhere (1435392 vs 919296 bytes)
-/scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.f:1153:20:
-
-       common /scrns/ resv1 (lx1,ly1,lz1,lelv)
+       common /scrns/ resv1 (lx1*ly1*lz1*lelv)
                     1
 Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (1032192 vs 1693440 bytes)
-/scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.f:1013:20:
-
-       COMMON /SCRNS/ RESV1 (LX1,LY1,LZ1,LELV)
-                    1
-Warning: Named COMMON block ‘scrns’ at (1) shall be of the same size as elsewhere (919296 vs 1693440 bytes)
 building libnek5000.a ... ar: `u' modifier ignored since `D' is the default (see `U')
 done
 mpif77  -O2 -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy  -DMPI -DUNDERSCORE -DGLOBAL_LONG_LONG -DTIMER -I/scratch/nobis/Nek5000/run/WavyChannel/IBM -I/scratch/nobis/Nek5000/core -I./ -I /scratch/nobis/Nek5000/core/experimental -o nek5000 /scratch/nobis/Nek5000/core/drive.f /scratch/nobis/Nek5000/run/WavyChannel/IBM/channel.o libnek5000.a -L/scratch/nobis/Nek5000/3rd_party/blasLapack -lblasLapack -L/scratch/nobis/Nek5000/3rd_party/gslib/lib -lgs -Wl,--allow-multiple-definition
@@ -44,5 +34,5 @@ mpif77  -O2 -cpp -fdefault-real-8 -fdefault-double-8 -std=legacy  -DMPI -DUNDERS
 #                  Compilation successful!                  #
 #############################################################
    text	   data	    bss	    dec	    hex	filename
-1840678	 179284	256400328	258420290	f672e42	nek5000
+1845716	 179300	256255176	258280192	f650b00	nek5000
 

@@ -1,4 +1,4 @@
-### makefile automatically created by makenek 02/19/2020 17:13:18 ###
+### makefile automatically created by makenek 02/22/2020 10:56:24 ###
 BINNAME=nek5000
 LIBNAME=libnek5000.a
 CASENAME:=channel

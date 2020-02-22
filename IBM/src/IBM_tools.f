@@ -478,7 +478,7 @@
 !     1) force velocity to zero just in the solid (multiply the IBM
 !     force with the mask)
          ffx  = ffx - (ux*alpha) !HARRY: YOU GOT RID OF VTRANS
-         ffy  = ffy - (uy*alpha)
+         ffy  = ffy - (uy*alpha) !HARRY: LOOK INTO NONDIMENSIONAL
          if(IF3D) ffz  =   ffz -
      $        (uz*alpha)
 !      else
@@ -614,11 +614,11 @@
 	y_threshold   = wave_amp - wave_amp*cos(argx)
 	
 	if(ym1(ix,iy,iz,iel).gt.y_threshold) then
-		IBM_MSKNF(ix,iy,iz,iel) = 0
+		IBM_MSKNF(ix,iy,iz,iel) = 1
 		ux = 1
 		
 	else
-		IBM_MSKNF(ix,iy,iz,iel) = 1
+		IBM_MSKNF(ix,iy,iz,iel) = 0
 		ux = 0
 
 	endif
